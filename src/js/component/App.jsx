@@ -4,16 +4,7 @@ import { nanoid } from "nanoid"
 
 function App() {
   const [task, setTask] = useState("")
-  const [todos, setTodos] = useState(() => {
-    const fromLocalStorage = localStorage.getItem("ITEMS")
-
-    if(fromLocalStorage == null){
-      return []
-    }
-    else{
-      return JSON.parse(fromLocalStorage)
-    }
-  })
+  const [todos, setTodos] = useState([])
 
   //edit mode state will serve to indicate which function will be used in submit, either add or edit.
   const [edit, setEdit] = useState({
@@ -27,19 +18,20 @@ function App() {
   useEffect(() => {
     console.log(todos)
     inputRef.current.focus()
-
-    localStorage.setItem("ITEMS", JSON.stringify(todos))
   },[todos])
 
   function handleSubmit(e){
     //0.always prevent default so it doesnt load page again. 
     e.preventDefault()
 
-    //1. if something written, call add or edit.
+    //1. if something SUBMITS, call add or edit.
     //    if(/^\s*$/.test(task) === false){}
       //2. if edit mode, call edit, else call add.
       if(edit.mode){
+        //if edit mode
+        //1.call edit function
         editTodo()
+        //2.reset edit state values 
         setEdit({
           mode:false,
           id: "",
@@ -54,14 +46,17 @@ function App() {
 
   }
 
-  function editTodo(){
+  function editTodo(){ 
     let newTask = ""
     if(/^\s*$/.test(task) === false){
+      //if input NOT empty or blank spaces, newTask = task(Value of input)
       newTask = task
     }
+    //if task indeed was empty, newTask value = whatever was stored in edit.task(old value of task when clicked edit AND ENTERED EDIT MODE)
     else{
       newTask = edit.task
     }
+    //new edittedTodo created: id from stored in edit, task was determined above, completed and show false, edit goes to false again.
     let edittedTodo = {
       id: edit.id,
       task: newTask,
@@ -70,6 +65,7 @@ function App() {
       edit: false
     }
 
+    //set todos again, map until you find the todo.id that matches the id stored in edit.id and OVERWRITE ONLY that one.
     setTodos(prevTodos => {
       return prevTodos.map(prevTodo => {
         return prevTodo.id === edit.id ? edittedTodo : prevTodo
@@ -97,6 +93,7 @@ function App() {
 
   function addTodo(){
     if(/^\s*$/.test(task) === false){
+      //1. create todo object if input has value
       let newTodo = {
         id: nanoid(),
         task: task,
@@ -104,11 +101,12 @@ function App() {
         showDelete: false,
         edit: false
       }
+      //2.set todo array to everything and the newtodo
       setTodos(prevTodos => {
         return [newTodo, ...prevTodos]
       })
     }
-
+    //if input empty just leave the function
     else {
       return
     }
@@ -122,10 +120,10 @@ function App() {
     })
   }
 
-  function handleComplete(id, completed){
+  function handleComplete(id, checkedValue){
     setTodos(prevTodos => {
       return prevTodos.map(prevTodo => {
-        return prevTodo.id === id ? {...prevTodo, completed: completed} : prevTodo
+        return prevTodo.id === id ? {...prevTodo, completed: checkedValue} : prevTodo
       })
     })
   }
@@ -142,12 +140,12 @@ function App() {
     <>  
         <form className="new-item-form" onSubmit={handleSubmit}>
             <div className="form-row">
-                <label htmlFor="item">New item</label>
+                <label htmlFor="item" className="header">New item:</label>
                 <input ref={inputRef} id="item" value={task} onChange={(e) => setTask(e.target.value)}/>
             </div>
             <button className="btn">Submit</button>
         </form>
-        <h1 className="header">Todo List</h1>
+        <h1 className="header header2">Todo List:</h1>
         <ul className="list">
 
           {todos.length === 0 && "Nothing todo... do something with your life!"}
@@ -156,17 +154,19 @@ function App() {
               return(
                   <li key={todo.id} className="itemWrapper" onMouseEnter={() => toggleShowDelete(todo.id)} onMouseLeave={() => toggleShowDelete(todo.id)}>
                     <label>
-                        <input type="checkbox" checked={todo.completed} onChange={(e) => handleComplete(todo.id, e.target.checked)}/>
+                        {/* 1. checkbox only appears when individual edit for each todo is FALSE */}
+                        {todo.edit === false && <input type="checkbox" checked={todo.completed} onChange={(e) => handleComplete(todo.id, e.target.checked)}/>}
+                        {/* 2. if edit is TRUE, task will no longer be available, just a message indicating to write corrrections and SUBMIT */}
                         {todo.edit? "Write corrections above and submit..." : todo.task }
                     </label>
                     {todo.edit ? 
                       "" : 
                       <div className="item-controls">
                           <button className="btn btn-danger" onClick={() => handleDelete(todo.id)}>Delete</button>
-                          {edit.mode === false && <button className="btn btn-warning" onClick={() => enterEditMode(todo.id, todo.task)}>Modify</button>}
+                          {/* if edit is TRUE, NO BUTTONS CAN BE CLICKED, BUT THIS NEEDS TO BE GLOBAL.*/}
+                          {edit.mode === false && <button className="btn btn-warning" onClick={() => enterEditMode(todo.id, todo.task)}>Edit</button>}
                       </div>
                     }
-
                   </li>
               )
           })}
